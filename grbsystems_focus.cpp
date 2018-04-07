@@ -65,10 +65,10 @@ void ISSnoopDevice (XMLEle *root)
 GRBSystems::GRBSystems()
 {
     // We use a hid connection
-    setFocuserConnection(CONNECTION_NONE);
+    setConnection(CONNECTION_NONE);
 
     // Can move in Absolute & Relative motions, can AbortFocuser motion, and has variable speed.        
-    SetFocuserCapability(FOCUSER_CAN_ABS_MOVE | FOCUSER_CAN_REL_MOVE | FOCUSER_CAN_ABORT );
+    FI::SetCapability(FOCUSER_CAN_ABS_MOVE | FOCUSER_CAN_REL_MOVE | FOCUSER_CAN_ABORT );
 
     lastPos = 0;
     haveReport = false;
@@ -177,7 +177,7 @@ bool GRBSystems::initProperties()
 
     addDebugControl();
 
-    updatePeriodMS = POLL_MS;
+    setDefaultPollingPeriod(POLL_MS);
 
     return true;
 
