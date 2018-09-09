@@ -65,7 +65,7 @@ void ISSnoopDevice (XMLEle *root)
 GRBSystems::GRBSystems()
 {
     // We use a hid connection
-    setConnection(CONNECTION_NONE);
+    setSupportedConnections(CONNECTION_NONE);
 
     // Can move in Absolute & Relative motions, can AbortFocuser motion, and has variable speed.        
     FI::SetCapability(FOCUSER_CAN_ABS_MOVE | FOCUSER_CAN_REL_MOVE | FOCUSER_CAN_ABORT );
