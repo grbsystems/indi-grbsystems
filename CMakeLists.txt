@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.4.7)
 PROJECT(indi_grbsystems CXX C)
 
-LIST(APPEND CMAKE_MODULE_PATH "/home/jeremy/source/repos/indi/cmake_modules")
+LIST(APPEND CMAKE_MODULE_PATH "~/Projects/indi/cmake_modules")
 include(GNUInstallDirs)
 
 if (NOT WIN32 AND NOT ANDROID)
