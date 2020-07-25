@@ -86,7 +86,7 @@ GRBSystems::~GRBSystems()
 
 bool GRBSystems::Connect(){
     int res;
-     wchar_t wstr[MAX_STR+1];
+    wchar_t wstr[MAX_STR+1];
     char cstr[MAX_STR+1];
 
     // Open the device using the VID, PID,
@@ -156,8 +156,13 @@ bool GRBSystems::initProperties()
     FocusSpeedN[0].value = 1;    
 
     // Maximum Travel
-    IUFillNumber(&MaxTravelN[0], "MAXTRAVEL", "Maximum travel", "%6.0f", 1., 60000., 0., 10000.);
+    IUFillNumber(&MaxTravelN[0], "MAXTRAVEL", "Maximum travel", "%6.0f", 1.,
+            60000, 0., report.maximum);
     IUFillNumberVector(&MaxTravelNP, MaxTravelN, 1, getDeviceName(), "FOCUS_MAXTRAVEL", "Max. travel", OPTIONS_TAB, IP_RW, 0, IPS_IDLE );
+
+    IUFillNumber(&SetPositionN[0], "CURPOS", "Current Position", "%6.0f", 1.,
+            60000., 0., report.position);
+    IUFillNumberVector(&SetPositionNP, SetPositionN, 1, getDeviceName(), "FOCUS_CURPOS", "Cur. Position", OPTIONS_TAB, IP_RW, 0, IPS_IDLE );
 
     DEBUG(INDI::Logger::DBG_SESSION, "Adding direction properties");
     IUFillSwitch(&PositiveMotionS[0],"NORMAL","Normal",ISS_ON);
@@ -190,6 +195,7 @@ bool GRBSystems::updateProperties()
     if (isConnected())
     {
         defineNumber(&MaxTravelNP);
+        defineNumber(&SetPositionNP);
         defineSwitch(&PositiveMotionSP);
 
         GetFocusParams();
@@ -200,7 +206,7 @@ bool GRBSystems::updateProperties()
     }
     else
     {
-
+        deleteProperty(SetPositionNP.name);
         deleteProperty(MaxTravelNP.name);
     }
 
@@ -291,6 +297,14 @@ bool GRBSystems::UpdateMaxTravel(unsigned int position) {
     return UpdatePrefs(&newRep);
 }
 
+bool GRBSystems::UpdateCurPos(unsigned int position) {
+    REPORT newRep = report;
+
+    newRep.position = position;
+
+    return UpdatePrefs(&newRep);
+}
+
 bool GRBSystems::UpdateDirection(bool outPositive) {
     REPORT newRep = report;
 
@@ -369,6 +383,16 @@ bool GRBSystems::ISNewNumber (const char *dev, const char *name, double values[]
 
             return UpdateMaxTravel(MaxTravelN[0].value);
         }
+
+        if (!strcmp (name, SetPositionNP.name)) {
+            IUUpdateNumber(&SetPositionNP, values, names, n);
+            SetPositionNP.s = IPS_OK;
+            IDSetNumber(&SetPositionNP, NULL);
+
+            // Update the max travel required
+
+            return UpdateCurPos(SetPositionN[0].value);
+        }
     }
 
     return INDI::Focuser::ISNewNumber(dev, name, values, names, n);
@@ -378,8 +402,8 @@ bool GRBSystems::ISNewNumber (const char *dev, const char *name, double values[]
 void GRBSystems::GetFocusParams ()
 {
     IDSetNumber(&FocusAbsPosNP, NULL);
+    IDSetNumber(&SetPositionNP, NULL);
     IDSetSwitch(&PositiveMotionSP,NULL);
-
 }
 
 IPState GRBSystems::MoveAbsFocuser(uint32_t targetTicks)
@@ -446,6 +470,8 @@ void GRBSystems::TimerHit() {
     FocusAbsPosN[0].value = report.position;
     FocusRelPosN[0].value = report.position;
 
+    SetPositionN[0].value = report.position;
+
 //    DEBUGF(INDI::Logger::DBG_DEBUG, "Resetting Maximum to: %d\n", report.maximum);
     MaxTravelN[0].value = report.maximum;
 
@@ -462,6 +488,7 @@ void GRBSystems::TimerHit() {
 
     IDSetNumber(&FocusAbsPosNP, NULL);
     IDSetNumber(&FocusRelPosNP, NULL);
+    IDSetNumber(&SetPositionNP, NULL);
     IDSetNumber(&MaxTravelNP, NULL);
 
     timerid = SetTimer(POLL_MS);
@@ -524,7 +551,7 @@ bool GRBSystems::AbortFocuser()
         return false;
     }
 
-    // Force a position reset
+    // Force a position reset/home/jeremy/Projects/indi-grbsystems/build
     targetPos = -1;
 
     return true;

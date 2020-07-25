@@ -63,6 +63,9 @@ private:
     INumber MaxTravelN[1];
     INumberVectorProperty MaxTravelNP;
 
+    INumber SetPositionN[1];
+    INumberVectorProperty SetPositionNP;
+
     int timerid;
     hid_device *handle;
     pthread_t reader_thread;
@@ -82,6 +85,7 @@ private:
     bool MoveFocuser(unsigned int position);
 
     bool UpdateMaxTravel(unsigned int position);
+    bool UpdateCurPos(unsigned int position);
     bool UpdateDirection(bool outPositive);
     bool UpdatePrefs(REPORT *prefs);
 
