@@ -164,7 +164,7 @@ bool GRBSystems::initProperties()
             60000., 0., report.position);
     IUFillNumberVector(&SetPositionNP, SetPositionN, 1, getDeviceName(), "FOCUS_CURPOS", "Cur. Position", OPTIONS_TAB, IP_RW, 0, IPS_IDLE );
 
-    DEBUG(INDI::Logger::DBG_SESSION, "Adding direction properties");
+    //DEBUG(INDI::Logger::DBG_SESSION, "Adding direction properties");
     IUFillSwitch(&PositiveMotionS[0],"NORMAL","Normal",ISS_ON);
     IUFillSwitch(&PositiveMotionS[1],"REVERSE","Reverse",ISS_OFF);
     IUFillSwitchVector(&PositiveMotionSP,PositiveMotionS,2,getDeviceName(),"POSITIVE_MOTION","Direction",OPTIONS_TAB,IP_RW,ISR_1OFMANY,60,IPS_OK);
@@ -253,11 +253,11 @@ bool GRBSystems::MoveFocuser(unsigned int position)
 
     if ((PositiveMotionS[0].s == ISS_ON) && (report.direction != 0)){
         // The direction has been flipped so we need to update the prefs to match
-        DEBUGF(INDI::Logger::DBG_DEBUG, "Set direction to positive out", NULL);
+        //DEBUGF(INDI::Logger::DBG_DEBUG, "Set direction to positive out", NULL);
 
         UpdateDirection(true);
     } else if((PositiveMotionS[1].s == ISS_ON) && (report.direction == 0)){
-        DEBUGF(INDI::Logger::DBG_DEBUG, "Set direction to positive in", NULL);
+        //DEBUGF(INDI::Logger::DBG_DEBUG, "Set direction to positive in", NULL);
         UpdateDirection(false);
     }
 
