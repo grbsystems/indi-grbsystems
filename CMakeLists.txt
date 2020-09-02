@@ -10,29 +10,17 @@ endif(NOT WIN32 AND NOT ANDROID)
 
 find_package(INDI REQUIRED)
 
-set(INDI_DATA_DIR "${CMAKE_INSTALL_PREFIX}/share/indi")
-set(RULES_INSTALL_DIR "/etc/udev/rules.d")
-
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h )
-
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/indi_grbsystems.xml.cmake ${CMAKE_CURRENT_BINARY_DIR}/indi_grbsystems.xml )
-
 include_directories( ${CMAKE_CURRENT_BINARY_DIR})
 include_directories( ${CMAKE_CURRENT_SOURCE_DIR})
 include_directories( ${INDI_INCLUDE_DIR})
 
-########### GRBSystems ###########
-set(indigrbsystems_SRCS
-   ${CMAKE_CURRENT_SOURCE_DIR}/grbsystems_focus.cpp
-   )
+option(WITH_HID_FOCUS "Install Hid Focus" On)
+option(WITH_FUSION_FOCUS "Install Fusion Focus" On)
 
-add_executable(indi_grbsystems_focus ${indigrbsystems_SRCS})
+if (WITH_HID_FOCUS)
+add_subdirectory(hid-focus)
+endif(WITH_HID_FOCUS)
 
-target_link_libraries(indi_grbsystems_focus ${INDI_LIBRARIES} pthread)
-
-install(TARGETS indi_grbsystems_focus RUNTIME DESTINATION bin )
-
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_grbsystems.xml DESTINATION ${INDI_DATA_DIR})
-
-install(FILES 99-grbsystems.rules DESTINATION ${RULES_INSTALL_DIR})
-
+if (WITH_FUSION_FOCUS)
+add_subdirectory(fusion-focus)
+endif(WITH_FUSION_FOCUS)

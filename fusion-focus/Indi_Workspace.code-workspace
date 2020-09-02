@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		},
+		{
+			"path": "../../focustest"
+		},
+		{
+			"path": "../../i2c-tools"
+		},
+		{
+			"path": "../../indi"
+		}
+	],
+	"settings": {}
+}
