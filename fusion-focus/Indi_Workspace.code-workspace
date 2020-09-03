@@ -13,5 +13,9 @@
 			"path": "../../indi"
 		}
 	],
-	"settings": {}
+	"settings": {
+		"files.associations": {
+			"typeinfo": "cpp"
+		}
+	}
 }

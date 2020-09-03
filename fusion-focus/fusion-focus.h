@@ -40,29 +40,12 @@ public:
     virtual bool ISNewNumber (const char *dev, const char *name, double values[], char *names[], int n);
     virtual bool ISNewSwitch (const char *dev, const char *name, ISState *states, char *names[], int n);
 
-    virtual IPState MoveAbsFocuser(uint32_t ticks);
-    virtual IPState MoveRelFocuser(FocusDirection dir, uint32_t ticks);
-
-    ISwitchVectorProperty PositiveMotionSP; //  A Switch in the client interface for focus_settings+ve direction of motion
-    ISwitch PositiveMotionS[2];
-
     virtual bool AbortFocuser();
     virtual void TimerHit();
 
 private:
 
-    INumber MaxTravelN[1];
-    INumberVectorProperty MaxTravelNP;
-
-    INumber SetPositionN[1];
-    INumberVectorProperty SetPositionNP;
-
     int timerid;
-
-    double targetPos, lastPos;
-
-    struct timeval focusMoveStart;
-    float focusMoveRequest;
 
     CFusionFocusDriver *focusDriver;
     FOCUSER focusSettings;
@@ -73,10 +56,7 @@ private:
 
     bool UpdateMaxTravel(unsigned int position);
     bool UpdateCurPos(unsigned int position);
-    bool UpdateDirection(bool outPositive);
-
-    static void* Reader(void *thread_params);
-    void DoRead();
+    bool UpdateDirection(int inOut);
 };
 
 #endif

@@ -65,7 +65,7 @@ int CFusionFocusDriver::I2COpen()
 	return file_i2c;
 }
 
-int CFusionFocusDriver::I2CGetWord(__u8 command)
+unsigned int CFusionFocusDriver::I2CGetWord(__u8 command)
 {
 	int file = I2COpen();
 	if(file > 0)
@@ -98,11 +98,11 @@ void CFusionFocusDriver::I2CSetWord(__u8 command, __u16 value)
 	}
 	else
 	{
-		throw CFocusException(360);
+		throw CFocusException(360); 
 	}
 }
 
-int CFusionFocusDriver::I2CGetByte(__u8 command)
+unsigned int CFusionFocusDriver::I2CGetByte(__u8 command)
 {
 	int file = I2COpen();
 	if(file > 0)
@@ -174,52 +174,52 @@ void CFusionFocusDriver::I2CGetBuffer(__u8 command, __u8* buffer, int buflen)
 }
 
 
-int CFusionFocusDriver::GetPosition()
+unsigned int CFusionFocusDriver::GetPosition()
 {
 	return I2CGetWord(FOCUS_GET_POS);
 }
 
-void CFusionFocusDriver::SetPosition(int posn)
+void CFusionFocusDriver::SetPosition(unsigned int posn)
 {
 	I2CSetWord(FOCUS_SET_POS, FLIP_BITS(posn));
 }
 
-int CFusionFocusDriver::GetMove()
+unsigned int CFusionFocusDriver::GetMove()
 {
 	return I2CGetWord(FOCUS_GET_MOVE);
 }
 
-void CFusionFocusDriver::SetMove(int move)
+void CFusionFocusDriver::SetMove(unsigned int move)
 {
 	I2CSetWord(FOCUS_SET_MOVE, FLIP_BITS(move));
 }
 
-int CFusionFocusDriver::GetMax()
+unsigned int CFusionFocusDriver::GetMax()
 {
 	return I2CGetWord(FOCUS_GET_MAX);
 }
 
-void CFusionFocusDriver::SetMax(int max)
+void CFusionFocusDriver::SetMax(unsigned int max)
 {
 	I2CSetWord(FOCUS_SET_MAX, FLIP_BITS(max));
 }
 
-int CFusionFocusDriver::GetMicron()
+unsigned int CFusionFocusDriver::GetMicron()
 {
 	return I2CGetWord(FOCUS_GET_MICRON);
 }
 
-void CFusionFocusDriver::SetMicron(int microns)
+void CFusionFocusDriver::SetMicron(unsigned int microns)
 {
 	I2CSetWord(FOCUS_SET_MICRON, FLIP_BITS(microns));
 }
 
-int CFusionFocusDriver::GetDir()
+unsigned int CFusionFocusDriver::GetDir()
 {
 	return I2CGetByte(FOCUS_GET_DIR);
 }
 
-void CFusionFocusDriver::SetDir(int dir)
+void CFusionFocusDriver::SetDir(unsigned int dir)
 {
 	I2CSetByte(FOCUS_SET_DIR, dir);
 }
@@ -227,4 +227,9 @@ void CFusionFocusDriver::SetDir(int dir)
 void CFusionFocusDriver::GetSettings(FOCUSER *focus_settings)
 {
 	I2CGetBuffer(FOCUS_GET_SETTINGS, (__u8*)focus_settings, sizeof(FOCUSER) );
+}
+
+void CFusionFocusDriver::Abort()
+{
+	I2CSetByte(FOCUS_SET_STOP, 0x00);
 }

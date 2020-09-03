@@ -18,17 +18,18 @@ typedef struct _focuser {
 class CFusionFocusDriver
 {
 public:
-    int GetPosition();
-    void SetPosition(int posn);
-    int GetMove();
-    void SetMove(int move);
-    int GetMax();
-    void SetMax(int max);
-    int GetMicron();
-    void SetMicron(int micron);
-    int GetDir();
-    void SetDir(int dir);
+    unsigned int GetPosition();
+    void SetPosition(unsigned int posn);
+    unsigned int GetMove();
+    void SetMove(unsigned int move);
+    unsigned int GetMax();
+    void SetMax(unsigned int max);
+    unsigned int GetMicron();
+    void SetMicron(unsigned int micron);
+    unsigned int GetDir();
+    void SetDir(unsigned int dir);
     void GetSettings(FOCUSER *focus_settings);
+    void Abort();
 
     class CFocusException
     {
@@ -46,9 +47,9 @@ private:
     void I2CAccess(int file, char read_write, __u8 command, int size, union i2c_smbus_data *data);
     int I2COpen();
 
-    int I2CGetWord(__u8 command);
+    unsigned int I2CGetWord(__u8 command);
     void I2CSetWord(__u8 command, __u16 value);
-    int I2CGetByte(__u8 command);
+    unsigned int I2CGetByte(__u8 command);
     void I2CSetByte(__u8 command, __u8 value);
     void I2CGetBuffer(__u8 command, __u8* buffer, int buflen);
 };
