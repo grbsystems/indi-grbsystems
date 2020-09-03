@@ -116,7 +116,6 @@ bool FusionFocus::ISNewNumber (const char *dev, const char *name, double values[
 {
     if(strcmp(dev,getDeviceName())==0)
     {
-        DEBUGF(INDI::Logger::DBG_ERROR, "Got number %s\n", name);
         if (!strcmp (name, FocusMaxPosNP.name)) {
             IUUpdateNumber(&FocusMaxPosNP, values, names, n);
             FocusMaxPosNP.s = IPS_OK;
