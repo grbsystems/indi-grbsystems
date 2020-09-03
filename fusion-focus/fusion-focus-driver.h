@@ -5,13 +5,17 @@
 #ifndef __FUSION_FOCUS_DRIVER_H
 #define __FUSION_FOCUS_DRIVER_H
 
+typedef unsigned char byte;
+
 typedef struct _focuser {
   unsigned short cur_pos;
   unsigned short set_pos;
   unsigned short max_move;
   unsigned short microns;
-  unsigned char  dir;
-  unsigned char  datacount;
+  byte           dir;
+  unsigned short adc1_mean;
+  unsigned short adc2_mean;  
+  byte           datacount;   
 } FOCUSER;
 
 
