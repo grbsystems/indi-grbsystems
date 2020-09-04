@@ -12,6 +12,7 @@ typedef struct _focuser {
   unsigned short set_pos;
   unsigned short max_move;
   unsigned short microns;
+  unsigned short backlash;
   byte           dir;
   unsigned short adc1_mean;
   unsigned short adc2_mean;  
@@ -28,6 +29,8 @@ public:
     void SetMove(unsigned int move);
     unsigned int GetMax();
     void SetMax(unsigned int max);
+    unsigned int GetBacklash();
+    void SetBacklash(unsigned int max);
     unsigned int GetMicron();
     void SetMicron(unsigned int micron);
     unsigned int GetDir();

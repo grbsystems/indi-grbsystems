@@ -84,16 +84,17 @@ bool FusionFocus::ISNewSwitch (const char *dev, const char *name, ISState *state
 {
     if(strcmp(dev,getDeviceName())==0)
     {
-        if (!strcmp (name, FocusMotionSP.name)) {
-            FocusMotionSP.s = IPS_OK;
-            IUUpdateSwitch(&FocusMotionSP, states, names, n);
+
+        if (!strcmp (name, ReverseDirectionSP.name)) {
+            ReverseDirectionSP.s = IPS_OK;
+            IUUpdateSwitch(&ReverseDirectionSP, states, names, n);
             int dir = 0;
-            if(FocusMotionS[FOCUS_OUTWARD].s == ISS_ON){
+            if(ReverseDirectionS[0].s == ISS_ON){
                 dir = 1;
             }
 
             UpdateDirection(dir);
-            IDSetSwitch(&FocusMotionSP, nullptr);
+            IDSetSwitch(&ReverseDirectionSP, nullptr);
 
             return true;
         }
@@ -143,6 +144,15 @@ bool FusionFocus::ISNewNumber (const char *dev, const char *name, double values[
             return UpdateCurPos(values[0]);
         }
 
+        if (!strcmp (name, BacklashNP.name)) {
+            IUUpdateNumber(&BacklashNP, values, names, n);
+            BacklashNP.s = IPS_OK;
+            IDSetNumber(&BacklashNP, NULL);
+
+            // Update the max travel required
+            return UpdateBacklash(values[0]);
+        }
+
         return true;
     }
 
@@ -190,16 +200,34 @@ bool FusionFocus::initProperties()
 
     setDefaultPollingPeriod(POLL_MS);
 
-    return true;
+    IUFillSwitch(&ReverseDirectionS[0], "MOTOR_NORMAL", "Normal", ISS_ON);
+    IUFillSwitch(&ReverseDirectionS[1], "MOTOR_REVERSE", "Reverse", ISS_OFF);
+    IUFillSwitchVector(&ReverseDirectionSP, ReverseDirectionS, 2, getDeviceName(), "REVERSE_DIRECTION", "Motor", 
+                       OPTIONS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_OK);
 
+    IUFillNumber(&BacklashN[0], "BACKLASH", "Backlash", "%0.0f", 0, 255, 10, 0.);
+    IUFillNumberVector(&BacklashNP, BacklashN, 1, getDeviceName(), "MOTOR_BACKLASH", "Backlash",
+                       OPTIONS_TAB, IP_RW, 0, IPS_OK);
+
+    return true;
 }
 
 bool FusionFocus::updateProperties()
 {
     INDI::Focuser::updateProperties();
 
-    return true;
+    if (isConnected())
+    {
+        defineSwitch(&ReverseDirectionSP);
+        defineNumber(&BacklashNP);
+    }
+    else
+    {
+        deleteProperty(ReverseDirectionSP.name);
+        deleteProperty(BacklashNP.name);
+    }
 
+    return true;
 }
 
 bool FusionFocus::Handshake()
@@ -227,6 +255,8 @@ bool FusionFocus::MoveFocuser(unsigned int position)
 
     if(focusDriver != NULL)
     {
+        DEBUGF(INDI::Logger::DBG_ERROR, "New Position is %u",position);
+
         focusDriver->SetMove(position);
     }
     else
@@ -263,8 +293,20 @@ bool FusionFocus::UpdateCurPos(unsigned int position) {
     }
     
     return false;
+}
 
-    return true;
+bool FusionFocus::UpdateBacklash(unsigned int backlash) {
+    if (isConnected() == false) { 
+        return false;
+    }
+    
+    if(focusDriver != NULL)
+    {
+        focusDriver->SetBacklash(backlash);
+        return true;
+    }
+    
+    return false;
 }
 
 bool FusionFocus::UpdateDirection(int inOut) {
@@ -277,7 +319,7 @@ bool FusionFocus::UpdateDirection(int inOut) {
         focusDriver->SetDir(inOut);
         return true;
     }
-    
+
     return false;
 }
 
@@ -309,14 +351,13 @@ void FusionFocus::TimerHit() {
         FocusMaxPosN[0].value = focusSettings.max_move;
         FocusMaxPosN[0].step = 100;
 
+        BacklashN[0].value = focusSettings.backlash;
 
-        FocusSpeedN[0].min = 1;
-        FocusSpeedN[0].max = 5;
-        FocusSpeedN[0].value = 1;    
-
-        IDSetNumber(&FocusSpeedNP, NULL);
         IDSetNumber(&FocusAbsPosNP, NULL);
         IDSetNumber(&FocusMaxPosNP, NULL);
+        IDSetNumber(&BacklashNP, NULL);
+
+        IDSetSwitch(&ReverseDirectionSP, NULL);
     }
 
     SetTimer(POLLMS);
