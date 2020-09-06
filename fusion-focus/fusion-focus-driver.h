@@ -37,6 +37,8 @@ public:
     void SetDir(unsigned int dir);
     void GetSettings(FOCUSER *focus_settings);
     void Abort();
+    unsigned int GetSpeed();
+    void SetSpeed(unsigned int speed);
 
     class CFocusException
     {

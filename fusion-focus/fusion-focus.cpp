@@ -67,8 +67,9 @@ FusionFocus::FusionFocus()
     // We use a i2c connection0.000
     setSupportedConnections(CONNECTION_NONE);
 
-    // Can move in Absolute & Relative motions, can AbortFocuser motion, and has variable speed.        
-    INDI::Focuser::SetCapability(FOCUSER_CAN_ABS_MOVE | FOCUSER_CAN_ABORT | FOCUSER_CAN_SYNC );
+    // Can move in Absolute & Relative motions, can AbortFocuser motion, and has variable speed
+    INDI::Focuser::SetCapability(FOCUSER_CAN_ABS_MOVE | FOCUSER_CAN_ABORT | FOCUSER_CAN_REVERSE|
+                                 FOCUSER_CAN_SYNC | FOCUSER_HAS_VARIABLE_SPEED | FOCUSER_HAS_BACKLASH );
 
     timerid = -1;
 
@@ -85,26 +86,38 @@ bool FusionFocus::ISNewSwitch (const char *dev, const char *name, ISState *state
     if(strcmp(dev,getDeviceName())==0)
     {
 
-        if (!strcmp (name, ReverseDirectionSP.name)) {
-            ReverseDirectionSP.s = IPS_OK;
-            IUUpdateSwitch(&ReverseDirectionSP, states, names, n);
+        if (!strcmp (name, FocusReverseSP.name)) {
+            FocusReverseSP.s = IPS_OK;
+            IUUpdateSwitch(&FocusReverseSP, states, names, n);
             int dir = 0;
-            if(ReverseDirectionS[0].s == ISS_ON){
+            if(FocusReverseS[0].s == ISS_ON){
                 dir = 1;
             }
 
             UpdateDirection(dir);
-            IDSetSwitch(&ReverseDirectionSP, nullptr);
+            IDSetSwitch(&FocusReverseSP, nullptr);
 
             return true;
         }
 
         if (!strcmp (name, FocusAbortSP.name)) {
             FocusAbortSP.s = IPS_OK;
-            
+
             IUUpdateSwitch(&FocusAbortSP, states, names, n);
             AbortFocuser();
             IDSetSwitch(&FocusAbortSP, nullptr);
+
+            return true;
+        }
+
+       if (strcmp(name, "FOCUS_BACKLASH_TOGGLE") == 0)
+        {
+            FocusBacklashSP.s = IPS_OK;
+            IUUpdateSwitch(&FocusBacklashSP, states, names, n);
+            //  Update client display
+            IDSetSwitch(&FocusBacklashSP, NULL);
+
+            // TODO - Zero out backlash on Disable
 
             return true;
         }
@@ -112,6 +125,7 @@ bool FusionFocus::ISNewSwitch (const char *dev, const char *name, ISState *state
 
     return INDI::Focuser::ISNewSwitch(dev, name, states, names, n);
 }
+
 
 bool FusionFocus::ISNewNumber (const char *dev, const char *name, double values[], char *names[], int n)
 {
@@ -126,6 +140,14 @@ bool FusionFocus::ISNewNumber (const char *dev, const char *name, double values[
             return UpdateMaxTravel(values[0]);
         }
 
+       if (!strcmp (name, FocusSyncNP.name)) {
+            IUUpdateNumber(&FocusSyncNP, values, names, n);
+            FocusSyncNP.s = IPS_OK;
+            IDSetNumber(&FocusSyncNP, NULL);
+
+            return UpdateCurPos(FocusSyncN[0].value);
+        }
+
         if (!strcmp (name, FocusAbsPosNP.name)) {
             IUUpdateNumber(&FocusAbsPosNP, values, names, n);
             FocusAbsPosNP.s = IPS_BUSY;
@@ -135,22 +157,22 @@ bool FusionFocus::ISNewNumber (const char *dev, const char *name, double values[
             return MoveFocuser(values[0]);
         }
 
-        if (!strcmp (name, FocusSyncNP.name)) {
-            IUUpdateNumber(&FocusSyncNP, values, names, n);
-            FocusSyncNP.s = IPS_OK;
-            IDSetNumber(&FocusSyncNP, NULL);
 
-            // Update the max travel required
-            return UpdateCurPos(values[0]);
-        }
-
-        if (!strcmp (name, BacklashNP.name)) {
-            IUUpdateNumber(&BacklashNP, values, names, n);
-            BacklashNP.s = IPS_OK;
-            IDSetNumber(&BacklashNP, NULL);
+        if (!strcmp (name, FocusBacklashNP.name)) {
+            IUUpdateNumber(&FocusBacklashNP, values, names, n);
+            FocusBacklashNP.s = IPS_OK;
+            IDSetNumber(&FocusBacklashNP, NULL);
 
             // Update the max travel required
             return UpdateBacklash(values[0]);
+        }
+
+       if (!strcmp (name, FocusSpeedNP.name)) {
+            IUUpdateNumber(&FocusSpeedNP, values, names, n);
+            FocusSpeedNP.s = IPS_OK;
+            IDSetNumber(&FocusSpeedNP, NULL);
+
+            return UpdateSpeed(FocusSpeedN[0].value);
         }
 
         return true;
@@ -198,16 +220,11 @@ bool FusionFocus::initProperties()
 {
     INDI::Focuser::initProperties();
 
+    FocusSpeedN[0].min = 1;
+    FocusSpeedN[0].max = 5;
+    FocusSpeedN[0].value = 1;    
+
     setDefaultPollingPeriod(POLL_MS);
-
-    IUFillSwitch(&ReverseDirectionS[0], "MOTOR_NORMAL", "Normal", ISS_ON);
-    IUFillSwitch(&ReverseDirectionS[1], "MOTOR_REVERSE", "Reverse", ISS_OFF);
-    IUFillSwitchVector(&ReverseDirectionSP, ReverseDirectionS, 2, getDeviceName(), "REVERSE_DIRECTION", "Motor", 
-                       OPTIONS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_OK);
-
-    IUFillNumber(&BacklashN[0], "BACKLASH", "Backlash", "%0.0f", 0, 255, 10, 0.);
-    IUFillNumberVector(&BacklashNP, BacklashN, 1, getDeviceName(), "MOTOR_BACKLASH", "Backlash",
-                       OPTIONS_TAB, IP_RW, 0, IPS_OK);
 
     return true;
 }
@@ -218,13 +235,9 @@ bool FusionFocus::updateProperties()
 
     if (isConnected())
     {
-        defineSwitch(&ReverseDirectionSP);
-        defineNumber(&BacklashNP);
     }
     else
     {
-        deleteProperty(ReverseDirectionSP.name);
-        deleteProperty(BacklashNP.name);
     }
 
     return true;
@@ -255,8 +268,6 @@ bool FusionFocus::MoveFocuser(unsigned int position)
 
     if(focusDriver != NULL)
     {
-        DEBUGF(INDI::Logger::DBG_ERROR, "New Position is %u",position);
-
         focusDriver->SetMove(position);
     }
     else
@@ -323,6 +334,17 @@ bool FusionFocus::UpdateDirection(int inOut) {
     return false;
 }
 
+bool FusionFocus::UpdateSpeed(unsigned int speed) {
+    if(speed > 5)
+    {
+        speed = 5;
+    }
+
+    focusDriver->SetSpeed(speed);
+
+    return true;
+}
+
 void FusionFocus::TimerHit() {
     if (isConnected() == false) { 
         return;
@@ -351,13 +373,17 @@ void FusionFocus::TimerHit() {
         FocusMaxPosN[0].value = focusSettings.max_move;
         FocusMaxPosN[0].step = 100;
 
-        BacklashN[0].value = focusSettings.backlash;
+        FocusBacklashN[0].value = focusSettings.backlash;
+        
+        // TODO - Actually set the speed when available
+        // FocusSpeedN[0].value = focusSettings.speed;
 
         IDSetNumber(&FocusAbsPosNP, NULL);
         IDSetNumber(&FocusMaxPosNP, NULL);
-        IDSetNumber(&BacklashNP, NULL);
+        IDSetNumber(&FocusBacklashNP, NULL);
+        IDSetNumber(&FocusSpeedNP, NULL);
 
-        IDSetSwitch(&ReverseDirectionSP, NULL);
+        IDSetSwitch(&FocusReverseSP, NULL);
     }
 
     SetTimer(POLLMS);

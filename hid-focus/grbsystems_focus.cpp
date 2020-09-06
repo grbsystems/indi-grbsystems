@@ -208,8 +208,6 @@ const char * GRBSystems::getDefaultName()
 
 bool GRBSystems::MoveFocuser(unsigned int position)
 {
-    DEBUGF(INDI::Logger::DBG_ERROR, "MoveFocuser", NULL);
-
     if (position < FocusAbsPosN[0].min || position > FocusAbsPosN[0].max)
     {
         DEBUGF(INDI::Logger::DBG_ERROR, "Requested position value out of bound: %d", position);
@@ -227,7 +225,6 @@ bool GRBSystems::MoveFocuser(unsigned int position)
     }
 
     targetPos = position;
-    DEBUGF(INDI::Logger::DBG_ERROR, "TargetPos set to %d", targetPos);
 
     // Build out the HID report for a move absolute
     unsigned char buf[BUF_SIZE];
@@ -240,7 +237,6 @@ bool GRBSystems::MoveFocuser(unsigned int position)
     buf[3] = top;
     buf[4] = bottom;
 
-    DEBUGF(INDI::Logger::DBG_ERROR, "Writing top, bottom: %d, %d", top, bottom);
 
     int res;
     res = hid_write(handle, buf, BUF_SIZE);
@@ -281,8 +277,6 @@ bool GRBSystems::UpdateCurPos(unsigned int position) {
     buf[2] = 0x00;      // channel 0
     buf[3] = top;
     buf[4] = bottom;
-
-    DEBUGF(INDI::Logger::DBG_ERROR, "Writing top, bottom: %d, %d", top, bottom);
 
     int res;
     res = hid_write(handle, buf, BUF_SIZE);
@@ -357,7 +351,6 @@ bool GRBSystems::UpdatePrefs(REPORT *prefs)
 bool GRBSystems::ISNewSwitch (const char *dev, const char *name, ISState *states, char *names[], int n)
 {
     if(strcmp(dev,getDeviceName())==0) {
-        DEBUGF(INDI::Logger::DBG_ERROR, "IsNewSwitch %s", name);
         if (strcmp(name, "FOCUS_REVERSE_MOTION") == 0) {
             //  client is telling us what to do with focus direction
             FocusReverseSP.s = IPS_OK;
@@ -388,7 +381,6 @@ bool GRBSystems::ISNewSwitch (const char *dev, const char *name, ISState *states
 
             // TODO - Zero out backlash on Disable
 
-            DEBUGF(INDI::Logger::DBG_ERROR, "Handled %s", name);
             return true;
         }
     }
@@ -400,8 +392,6 @@ bool GRBSystems::ISNewNumber (const char *dev, const char *name, double values[]
 {
     if(strcmp(dev,getDeviceName())==0)
     {
-        DEBUGF(INDI::Logger::DBG_ERROR, "ISNewNumber %s", name);
-
         if (!strcmp (name, FocusMaxPosNP.name)) {
             IUUpdateNumber(&FocusMaxPosNP, values, names, n);
             FocusMaxPosNP.s = IPS_OK;
@@ -485,17 +475,8 @@ void GRBSystems::TimerHit() {
     }
 
 
-    DEBUGF(INDI::Logger::DBG_DEBUG, "Is Moving: %d\n", report.isMoving);
-    DEBUGF(INDI::Logger::DBG_DEBUG, "Position: %d\n", report.position);
-    DEBUGF(INDI::Logger::DBG_DEBUG, "Maximum: %d\n", report.maximum);
-    DEBUGF(INDI::Logger::DBG_DEBUG, "Pulse: %d\n", report.pulse);
-    DEBUGF(INDI::Logger::DBG_DEBUG, "Direction: %d\n", report.direction);
-    DEBUGF(INDI::Logger::DBG_DEBUG, "Backlash: %d\n", report.backlash);
-    DEBUGF(INDI::Logger::DBG_DEBUG, "Microns: %d\n", report.microns);
-
     FocusAbsPosN[0].value = report.position;
 
-    DEBUGF(INDI::Logger::DBG_DEBUG, "Resetting Maximum to: %d\n", report.maximum);
     FocusMaxPosN[0].value = report.maximum;
     FocusMaxPosN[0].max = 65535;
     FocusAbsPosN[0].max = report.maximum;
