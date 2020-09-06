@@ -50,30 +50,16 @@ public:
     virtual bool ISNewSwitch (const char *dev, const char *name, ISState *states, char *names[], int n);
 
     virtual IPState MoveAbsFocuser(uint32_t ticks);
-    virtual IPState MoveRelFocuser(FocusDirection dir, uint32_t ticks);
-
-    ISwitchVectorProperty PositiveMotionSP; //  A Switch in the client interface for +ve direction of motion
-    ISwitch PositiveMotionS[2];
 
     virtual bool AbortFocuser();
     virtual void TimerHit();
 
 private:
-
-    INumber MaxTravelN[1];
-    INumberVectorProperty MaxTravelNP;
-
-    INumber SetPositionN[1];
-    INumberVectorProperty SetPositionNP;
-
     int timerid;
     hid_device *handle;
     pthread_t reader_thread;
 
-    double targetPos, lastPos;
-
-    struct timeval focusMoveStart;
-    float focusMoveRequest;
+    double targetPos;
 
     bool haveReport;
     bool keep_running;
@@ -86,6 +72,8 @@ private:
 
     bool UpdateMaxTravel(unsigned int position);
     bool UpdateCurPos(unsigned int position);
+    bool UpdateBacklash(unsigned int position);
+    bool UpdateSpeed(unsigned int speed);
     bool UpdateDirection(bool outPositive);
     bool UpdatePrefs(REPORT *prefs);
 

@@ -236,6 +236,17 @@ void CFusionFocusDriver::SetDir(unsigned int dir)
 	I2CSetByte(FOCUS_SET_DIR, dir);
 }
 
+unsigned int CFusionFocusDriver::GetSpeed()
+{
+	// TODO - Return 5 until real data is available
+	return 5;
+}
+
+void CFusionFocusDriver::SetSpeed(unsigned int speed)
+{
+ 	// TODO - Write value when availabe in firmware
+}
+
 void CFusionFocusDriver::GetSettings(FOCUSER *focus_settings)
 {
 	I2CGetBuffer(FOCUS_GET_SETTINGS, (__u8*)focus_settings, sizeof(FOCUSER) );

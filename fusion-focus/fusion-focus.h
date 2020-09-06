@@ -58,13 +58,7 @@ private:
     bool UpdateCurPos(unsigned int position);
     bool UpdateDirection(int inOut);
     bool UpdateBacklash(unsigned int backlash);
-
-    ISwitch ReverseDirectionS[2];
-    ISwitchVectorProperty ReverseDirectionSP;
-
-    INumber BacklashN[1];
-    INumberVectorProperty BacklashNP;
-
+    bool UpdateSpeed(unsigned int backlash);
 };
 
 #endif
