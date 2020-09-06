@@ -15,7 +15,8 @@
 	],
 	"settings": {
 		"files.associations": {
-			"typeinfo": "cpp"
+			"typeinfo": "cpp",
+			"regex": "cpp"
 		}
 	}
 }

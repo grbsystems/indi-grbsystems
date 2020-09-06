@@ -5,13 +5,18 @@
 #ifndef __FUSION_FOCUS_DRIVER_H
 #define __FUSION_FOCUS_DRIVER_H
 
+typedef unsigned char byte;
+
 typedef struct _focuser {
   unsigned short cur_pos;
   unsigned short set_pos;
   unsigned short max_move;
   unsigned short microns;
-  unsigned char  dir;
-  unsigned char  datacount;
+  unsigned short backlash;
+  byte           dir;
+  unsigned short adc1_mean;
+  unsigned short adc2_mean;  
+  byte           datacount;   
 } FOCUSER;
 
 
@@ -24,6 +29,8 @@ public:
     void SetMove(unsigned int move);
     unsigned int GetMax();
     void SetMax(unsigned int max);
+    unsigned int GetBacklash();
+    void SetBacklash(unsigned int max);
     unsigned int GetMicron();
     void SetMicron(unsigned int micron);
     unsigned int GetDir();

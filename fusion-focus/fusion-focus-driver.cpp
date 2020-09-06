@@ -21,6 +21,8 @@
 #define FOCUS_GET_DIR     	0x0D
 #define FOCUS_SET_DIR     	0x0E
 #define FOCUS_GET_SETTINGS 	0x10
+#define FOCUS_GET_BACKLASH  0x11
+#define FOCUS_SET_BACKLASH  0x12
 
 //#define FLIP_BITS(A)	(((A & 0xFF00) >> 8 ) + ((A & 0x00FF) << 8 ))
 #define FLIP_BITS(A)	(A)
@@ -212,6 +214,16 @@ unsigned int CFusionFocusDriver::GetMicron()
 void CFusionFocusDriver::SetMicron(unsigned int microns)
 {
 	I2CSetWord(FOCUS_SET_MICRON, FLIP_BITS(microns));
+}
+
+unsigned int CFusionFocusDriver::GetBacklash()
+{
+	return I2CGetWord(FOCUS_GET_BACKLASH);
+}
+
+void CFusionFocusDriver::SetBacklash(unsigned int backlash)
+{
+	I2CSetWord(FOCUS_SET_BACKLASH, FLIP_BITS(backlash));
 }
 
 unsigned int CFusionFocusDriver::GetDir()
