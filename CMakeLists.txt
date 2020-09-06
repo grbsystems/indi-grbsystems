@@ -15,7 +15,7 @@ include_directories( ${CMAKE_CURRENT_SOURCE_DIR})
 include_directories( ${INDI_INCLUDE_DIR})
 
 option(WITH_HID_FOCUS "Install Hid Focus" On)
-option(WITH_FUSION_FOCUS "Install Fusion Focus" On)
+option(WITH_FUSION_FOCUS "Install Fusion Focus" Off)
 
 if (WITH_HID_FOCUS)
 add_subdirectory(hid-focus)
