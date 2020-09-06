@@ -57,6 +57,14 @@ private:
     bool UpdateMaxTravel(unsigned int position);
     bool UpdateCurPos(unsigned int position);
     bool UpdateDirection(int inOut);
+    bool UpdateBacklash(unsigned int backlash);
+
+    ISwitch ReverseDirectionS[2];
+    ISwitchVectorProperty ReverseDirectionSP;
+
+    INumber BacklashN[1];
+    INumberVectorProperty BacklashNP;
+
 };
 
 #endif
