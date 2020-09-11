@@ -77,6 +77,8 @@ private:
     bool UpdateDirection(bool outPositive);
     bool UpdatePrefs(REPORT *prefs);
 
+    int MapPulse(int pulse);
+
     static void* Reader(void *thread_params);
     void DoRead();
 };

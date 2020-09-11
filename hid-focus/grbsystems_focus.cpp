@@ -25,6 +25,7 @@
 #define BUF_SIZE 64
 
 std::unique_ptr<GRBSystems> grbSystems(new GRBSystems());
+static int times[5] = {15, 5, 3, 1, 0};
 
 void ISGetProperties(const char *dev)
 {
@@ -154,16 +155,28 @@ bool GRBSystems::initProperties()
 
     FocusSpeedN[0].min = 1;
     FocusSpeedN[0].max = 5;
-    FocusSpeedN[0].value = 1;    
+    FocusSpeedN[0].value = 5;
+    FocusSpeedN[0].step = 1;
 
     FocusAbsPosN[0].min = 0.;
     FocusAbsPosN[0].max = 22500.;
     FocusAbsPosN[0].value = 0;
     FocusAbsPosN[0].step = 100;
 
+    FocusBacklashN[0].min = 0.;
+    FocusBacklashN[0].max = 255.;
+    FocusBacklashN[0].value = 0;
+    FocusBacklashN[0].step = 5;
+
     addDebugControl();
 
     setDefaultPollingPeriod(POLL_MS);
+
+    IDSetNumber(&FocusAbsPosNP, NULL);
+    IDSetNumber(&FocusMaxPosNP, NULL);
+    IDSetNumber(&FocusSyncNP, NULL);
+    IDSetNumber(&FocusBacklashNP, NULL);
+    IDSetNumber(&FocusSpeedNP, NULL);
 
     return true;
 
@@ -290,7 +303,6 @@ bool GRBSystems::UpdateCurPos(unsigned int position) {
 
 bool GRBSystems::UpdateSpeed(unsigned int speed) {
     // These delay to delay factors in the firmware.
-    static int times[5] = {15, 5, 3, 1, 0};
     REPORT newRep = report;
 
     if(speed > 5)
@@ -461,6 +473,18 @@ IPState GRBSystems::MoveAbsFocuser(uint32_t targetTicks)
     return IPS_BUSY;
 }
 
+int GRBSystems::MapPulse(int pulse) {
+    int speed = 1;
+    for(int i=0; i<5; i++){
+        if(pulse == times[i]){
+            speed = i+1;
+            break;
+        }
+    }
+
+    return speed;
+}
+
 void GRBSystems::TimerHit() {
 
     if (isConnected() == false) {
@@ -476,16 +500,27 @@ void GRBSystems::TimerHit() {
 
 
     FocusAbsPosN[0].value = report.position;
+    FocusAbsPosN[0].min = 0.;
+    FocusAbsPosN[0].max = 22500.;
+    FocusAbsPosN[0].step = 100;
 
     FocusMaxPosN[0].value = report.maximum;
     FocusMaxPosN[0].max = 65535;
-    FocusAbsPosN[0].max = report.maximum;
+    FocusMaxPosN[0].min = 2000;
+    FocusMaxPosN[0].step = 100;
+
+    FocusBacklashN[0].value = report.backlash;
+    FocusBacklashN[0].max = 255;
+    FocusBacklashN[0].min = 0;
+    FocusBacklashN[0].step = 5;
 
     if (report.isMoving || (targetPos != report.position)) {
         FocusAbsPosNP.s = IPS_BUSY;
     } else {
         FocusAbsPosNP.s = IPS_OK;
     }
+
+    FocusSpeedN[0].value = MapPulse(report.pulse);
 
     IDSetNumber(&FocusAbsPosNP, NULL);
     IDSetNumber(&FocusMaxPosNP, NULL);
