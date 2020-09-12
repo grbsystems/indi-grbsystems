@@ -375,8 +375,7 @@ void FusionFocus::TimerHit() {
 
         FocusBacklashN[0].value = focusSettings.backlash;
         
-        // TODO - Actually set the speed when available
-        // FocusSpeedN[0].value = focusSettings.speed;
+        FocusSpeedN[0].value = focusSettings.step_timer;
 
         IDSetNumber(&FocusAbsPosNP, NULL);
         IDSetNumber(&FocusMaxPosNP, NULL);
