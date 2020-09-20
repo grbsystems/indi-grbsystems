@@ -45,8 +45,6 @@ public:
     {
         public:
             CFocusException(int err);
-        
-        protected:
             int m_err;
     };
 
