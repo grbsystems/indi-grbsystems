@@ -267,7 +267,7 @@ const char * FusionFocus::getDefaultName()
 
 bool FusionFocus::MoveFocuser(unsigned int position)
 {
-    DEBUGF(INDI::Logger::DBG_SESSION, "Fusion Focuser commanded move to %ud", position);
+    DEBUGF(INDI::Logger::DBG_SESSION, "Fusion Focuser commanded move to %u", position);
 
     if (position < FocusAbsPosN[0].min || position > FocusAbsPosN[0].max)
     {
@@ -307,7 +307,7 @@ bool FusionFocus::MoveFocuser(unsigned int position)
 
 bool FusionFocus::UpdateMaxTravel(unsigned int position) 
 {
-    DEBUGF(INDI::Logger::DBG_SESSION, "Fusion Focuser Update Max to %ud", position);
+    DEBUGF(INDI::Logger::DBG_SESSION, "Fusion Focuser Update Max to %u", position);
 
     if (isConnected() == false) {
         DEBUG(INDI::Logger::DBG_ERROR, "Not Connected!");
@@ -345,7 +345,7 @@ bool FusionFocus::UpdateMaxTravel(unsigned int position)
 }
 
 bool FusionFocus::UpdateCurPos(unsigned int position) {
-    DEBUGF(INDI::Logger::DBG_SESSION, "Fusion Focuser CurPos Max to %ud", position);
+    DEBUGF(INDI::Logger::DBG_SESSION, "Fusion Focuser CurPos Max to %u", position);
 
     if (isConnected() == false) {
         DEBUG(INDI::Logger::DBG_ERROR, "Not Connected!");
@@ -444,7 +444,7 @@ bool FusionFocus::UpdateDirection(int inOut) {
 }
 
 bool FusionFocus::UpdateSpeed(unsigned int speed) {
-    DEBUGF(INDI::Logger::DBG_SESSION, "Fusion Focuser Update speed to %ud", speed);
+    DEBUGF(INDI::Logger::DBG_SESSION, "Fusion Focuser Update speed to %u", speed);
 
     if (isConnected() == false) {
         DEBUG(INDI::Logger::DBG_ERROR, "Not Connected!");
@@ -482,8 +482,45 @@ bool FusionFocus::UpdateSpeed(unsigned int speed) {
     return false;
 }
 
+bool FusionFocus::AbortFocuser()
+{
+    DEBUG(INDI::Logger::DBG_SESSION, "Aborting focus");
+
+    if(!isConnected()){
+        DEBUGF(INDI::Logger::DBG_ERROR, "Focuser not connected in Abort Focuser!", NULL);
+        return false;
+    }
+
+    if(focusDriver != NULL)
+    {
+        int retry = 3;
+        while(retry != 0) {
+            try {
+                focusDriver->Abort();
+                break;
+            } catch (CFusionFocusDriver::CFocusException e) {
+                retry--;
+                DEBUGF(INDI::Logger::DBG_ERROR, "Abort failed with error %d, retry %d times", e.m_err);
+                sleep(0.05);
+            }
+        }
+
+        if(retry==0){
+            return false;
+        }
+
+        return true;
+    }
+
+    DEBUG(INDI::Logger::DBG_ERROR, "Focus Driver is NULL");
+    return false;
+}
+
+
+
 void FusionFocus::TimerHit() {
-    DEBUG(INDI::Logger::DBG_DEBUG, "TimerHit");
+    // This causes log spamming
+    //DEBUG(INDI::Logger::DBG_DEBUG, "TimerHit");
 
     if (isConnected() == false) {
         DEBUG(INDI::Logger::DBG_DEBUG, "Not Connected!");
@@ -531,25 +568,6 @@ void FusionFocus::TimerHit() {
     }
 
     SetTimer(POLLMS);
-}
-
-bool FusionFocus::AbortFocuser()
-{
-    if(!isConnected()){
-        DEBUGF(INDI::Logger::DBG_ERROR, "Focuser not connected in Abort Focuser!", NULL);
-        return false;
-    }
-
-    if(focusDriver != NULL)
-    {
-        focusDriver->Abort();
-    }
-    else
-    {
-        DEBUG(INDI::Logger::DBG_ERROR, "Focus Driver is NUll in Abort Focuser");
-    }
-
-    return true;
 }
 
 
