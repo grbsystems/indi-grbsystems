@@ -23,6 +23,8 @@
 #define FOCUS_GET_SETTINGS 	0x10
 #define FOCUS_GET_BACKLASH  0x11
 #define FOCUS_SET_BACKLASH  0x12
+#define FOCUS_GET_SPEED     0x13
+#define FOCUS_SET_SPEED     0x14
 
 //#define FLIP_BITS(A)	(((A & 0xFF00) >> 8 ) + ((A & 0x00FF) << 8 ))
 #define FLIP_BITS(A)	(A)
@@ -236,15 +238,14 @@ void CFusionFocusDriver::SetDir(unsigned int dir)
 	I2CSetByte(FOCUS_SET_DIR, dir);
 }
 
-unsigned int CFusionFocusDriver::GetSpeed()
+unsigned char CFusionFocusDriver::GetSpeed()
 {
-	// TODO - Return 5 until real data is available
-	return 5;
+	return I2CGetByte(FOCUS_GET_SPEED);;
 }
 
-void CFusionFocusDriver::SetSpeed(unsigned int speed)
+void CFusionFocusDriver::SetSpeed(unsigned char speed)
 {
- 	// TODO - Write value when availabe in firmware
+	I2CSetByte(FOCUS_SET_SPEED, speed);
 }
 
 void CFusionFocusDriver::GetSettings(FOCUSER *focus_settings)

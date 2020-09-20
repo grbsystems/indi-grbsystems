@@ -17,6 +17,7 @@ typedef struct _focuser {
   unsigned short adc1_mean;
   unsigned short adc2_mean;  
   byte           datacount;   
+  byte           step_timer;
 } FOCUSER;
 
 
@@ -37,8 +38,8 @@ public:
     void SetDir(unsigned int dir);
     void GetSettings(FOCUSER *focus_settings);
     void Abort();
-    unsigned int GetSpeed();
-    void SetSpeed(unsigned int speed);
+    unsigned char GetSpeed();
+    void SetSpeed(unsigned char speed);
 
     class CFocusException
     {
