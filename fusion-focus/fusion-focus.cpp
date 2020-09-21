@@ -556,7 +556,12 @@ void FusionFocus::TimerHit() {
                 //
                 // Note that this is to help prevent a focuser runway due to a firmware timing issue
                 // believed fixed, but how to test?  This is here ot try to prevent lost nights imaging
-                DEBUG(INDI::Logger::DBG_ERROR, "Potential focus runway - Monitoring");
+                if(badHit > 0){
+                    // Ignore the first hit as it generatesa lot of false positives due to timing 
+                    // issues with changes in data
+                    DEBUG(INDI::Logger::DBG_ERROR, "Potential focus runway - Monitoring");
+                }
+                
                 badHit++;
                 if(badHit > 2){
                     // Three seconds of wrong direction = runway.
