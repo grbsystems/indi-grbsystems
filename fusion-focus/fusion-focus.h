@@ -50,6 +50,9 @@ private:
     CFusionFocusDriver *focusDriver;
     FOCUSER focusSettings;
 
+    int setPosition;
+    int delta;
+
     void GetFocusParams();
 
     bool MoveFocuser(unsigned int position);

@@ -17,7 +17,7 @@
 
 #include <unistd.h>
 #include <memory>
-#include <string.h>
+#include <cstring>
 
 #include "fusion-focus.h"
 
@@ -286,6 +286,11 @@ bool FusionFocus::MoveFocuser(unsigned int position)
         while(retry != 0) {
             try {
                 focusDriver->SetMove(position);
+
+                // Cache the set position and calculate the anticipated delta
+                setPosition = position;
+                delta = abs(long(position) - long(focusSettings.cur_pos));
+
                 break;
             } catch (CFusionFocusDriver::CFocusException e) {
                 retry--;
@@ -522,6 +527,8 @@ void FusionFocus::TimerHit() {
     // This causes log spamming
     //DEBUG(INDI::Logger::DBG_DEBUG, "TimerHit");
 
+    static int badHit = 0;
+
     if (isConnected() == false) {
         DEBUG(INDI::Logger::DBG_DEBUG, "Not Connected!");
         return;
@@ -539,7 +546,29 @@ void FusionFocus::TimerHit() {
         if(focusSettings.cur_pos != focusSettings.set_pos)
         {
             FocusAbsPosNP.s = IPS_BUSY;
-            DEBUGF(INDI::Logger::DBG_SESSION, "Focus Driver is at %d moving to %d", focusSettings.cur_pos, focusSettings.set_pos);
+            DEBUGF(INDI::Logger::DBG_DEBUG, "Focus Driver is at %d moving to %d", focusSettings.cur_pos, focusSettings.set_pos);
+
+            // Get the new delta position
+            int new_delta = abs(long(setPosition) - long(focusSettings.cur_pos));
+            if(new_delta > delta){
+                // We have a bad hit.  This may be a timer/update/network lag issue
+                // so keep a count of the hits and retry the move if exceeded.
+                //
+                // Note that this is to help prevent a focuser runway due to a firmware timing issue
+                // believed fixed, but how to test?  This is here ot try to prevent lost nights imaging
+                DEBUG(INDI::Logger::DBG_ERROR, "Potential focus runway - Monitoring");
+                badHit++;
+                if(badHit > 2){
+                    // Three seconds of wrong direction = runway.
+                    // Resend the move demand.
+                    MoveFocuser(setPosition);
+                    badHit=0;
+                    DEBUGF(INDI::Logger::DBG_ERROR, "Focus Driver Runaway!  Resending move to %d", setPosition);
+                }
+            } else {
+                // Keep the bad hits at zero.
+                badHit = 0;
+            }
         }
         else
         {
