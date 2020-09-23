@@ -7,7 +7,7 @@
 
 typedef unsigned char byte;
 
-typedef struct _focuser {
+typedef struct __attribute__((packed, aligned(2))) _focuser {
   unsigned short cur_pos;
   unsigned short set_pos;
   unsigned short max_move;
@@ -45,8 +45,6 @@ public:
     {
         public:
             CFocusException(int err);
-        
-        protected:
             int m_err;
     };
 
