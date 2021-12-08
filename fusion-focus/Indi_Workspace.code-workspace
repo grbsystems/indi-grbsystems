@@ -1,0 +1,22 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		},
+		{
+			"path": "../../focustest"
+		},
+		{
+			"path": "../../i2c-tools"
+		},
+		{
+			"path": "../../indi"
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"typeinfo": "cpp",
+			"regex": "cpp"
+		}
+	}
+}

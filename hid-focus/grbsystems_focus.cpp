@@ -18,12 +18,14 @@
 #include "grbsystems_focus.h"
 #include <memory>
 #include <string.h>
+#include <unistd.h>
 
 #define POLL_MS  1000
 #define MAX_STR 255
 #define BUF_SIZE 64
 
 std::unique_ptr<GRBSystems> grbSystems(new GRBSystems());
+static int times[5] = {15, 5, 3, 1, 0};
 
 void ISGetProperties(const char *dev)
 {
@@ -68,9 +70,9 @@ GRBSystems::GRBSystems()
     setSupportedConnections(CONNECTION_NONE);
 
     // Can move in Absolute & Relative motions, can AbortFocuser motion, and has variable speed.        
-    FI::SetCapability(FOCUSER_CAN_ABS_MOVE | FOCUSER_CAN_REL_MOVE | FOCUSER_CAN_ABORT );
+    FI::SetCapability(FOCUSER_CAN_ABS_MOVE | FOCUSER_CAN_ABORT | FOCUSER_CAN_REVERSE|
+                           FOCUSER_CAN_SYNC | FOCUSER_HAS_VARIABLE_SPEED | FOCUSER_HAS_BACKLASH);
 
-    lastPos = 0;
     haveReport = false;
 
     handle = NULL;
@@ -86,7 +88,7 @@ GRBSystems::~GRBSystems()
 
 bool GRBSystems::Connect(){
     int res;
-     wchar_t wstr[MAX_STR+1];
+    wchar_t wstr[MAX_STR+1];
     char cstr[MAX_STR+1];
 
     // Open the device using the VID, PID,
@@ -153,31 +155,28 @@ bool GRBSystems::initProperties()
 
     FocusSpeedN[0].min = 1;
     FocusSpeedN[0].max = 5;
-    FocusSpeedN[0].value = 1;    
-
-    // Maximum Travel
-    IUFillNumber(&MaxTravelN[0], "MAXTRAVEL", "Maximum travel", "%6.0f", 1., 60000., 0., 10000.);
-    IUFillNumberVector(&MaxTravelNP, MaxTravelN, 1, getDeviceName(), "FOCUS_MAXTRAVEL", "Max. travel", OPTIONS_TAB, IP_RW, 0, IPS_IDLE );
-
-    DEBUG(INDI::Logger::DBG_SESSION, "Adding direction properties");
-    IUFillSwitch(&PositiveMotionS[0],"NORMAL","Normal",ISS_ON);
-    IUFillSwitch(&PositiveMotionS[1],"REVERSE","Reverse",ISS_OFF);
-    IUFillSwitchVector(&PositiveMotionSP,PositiveMotionS,2,getDeviceName(),"POSITIVE_MOTION","Direction",OPTIONS_TAB,IP_RW,ISR_1OFMANY,60,IPS_OK);
-
-    /* Relative and absolute movement */
-    FocusRelPosN[0].min = 0.;
-    FocusRelPosN[0].max = 22500.;
-    FocusRelPosN[0].value = 0;
-    FocusRelPosN[0].step = 250;
+    FocusSpeedN[0].value = 5;
+    FocusSpeedN[0].step = 1;
 
     FocusAbsPosN[0].min = 0.;
     FocusAbsPosN[0].max = 22500.;
     FocusAbsPosN[0].value = 0;
-    FocusAbsPosN[0].step = 250;
+    FocusAbsPosN[0].step = 100;
+
+    FocusBacklashN[0].min = 0.;
+    FocusBacklashN[0].max = 255.;
+    FocusBacklashN[0].value = 0;
+    FocusBacklashN[0].step = 5;
 
     addDebugControl();
 
     setDefaultPollingPeriod(POLL_MS);
+
+    IDSetNumber(&FocusAbsPosNP, NULL);
+    IDSetNumber(&FocusMaxPosNP, NULL);
+    IDSetNumber(&FocusSyncNP, NULL);
+    IDSetNumber(&FocusBacklashNP, NULL);
+    IDSetNumber(&FocusSpeedNP, NULL);
 
     return true;
 
@@ -189,9 +188,6 @@ bool GRBSystems::updateProperties()
 
     if (isConnected())
     {
-        defineNumber(&MaxTravelNP);
-        defineSwitch(&PositiveMotionSP);
-
         GetFocusParams();
 
         loadConfig(true);
@@ -200,8 +196,6 @@ bool GRBSystems::updateProperties()
     }
     else
     {
-
-        deleteProperty(MaxTravelNP.name);
     }
 
     return true;
@@ -227,8 +221,6 @@ const char * GRBSystems::getDefaultName()
 
 bool GRBSystems::MoveFocuser(unsigned int position)
 {
-    DEBUGF(INDI::Logger::DBG_ERROR, "MoveFocuser", NULL);
-
     if (position < FocusAbsPosN[0].min || position > FocusAbsPosN[0].max)
     {
         DEBUGF(INDI::Logger::DBG_ERROR, "Requested position value out of bound: %d", position);
@@ -245,18 +237,7 @@ bool GRBSystems::MoveFocuser(unsigned int position)
         return false;
     }
 
-    if ((PositiveMotionS[0].s == ISS_ON) && (report.direction != 0)){
-        // The direction has been flipped so we need to update the prefs to match
-        DEBUGF(INDI::Logger::DBG_DEBUG, "Set direction to positive out", NULL);
-
-        UpdateDirection(true);
-    } else if((PositiveMotionS[1].s == ISS_ON) && (report.direction == 0)){
-        DEBUGF(INDI::Logger::DBG_DEBUG, "Set direction to positive in", NULL);
-        UpdateDirection(false);
-    }
-
     targetPos = position;
-    DEBUGF(INDI::Logger::DBG_ERROR, "TargetPos set to %d", targetPos);
 
     // Build out the HID report for a move absolute
     unsigned char buf[BUF_SIZE];
@@ -269,7 +250,6 @@ bool GRBSystems::MoveFocuser(unsigned int position)
     buf[3] = top;
     buf[4] = bottom;
 
-    DEBUGF(INDI::Logger::DBG_ERROR, "Writing top, bottom: %d, %d", top, bottom);
 
     int res;
     res = hid_write(handle, buf, BUF_SIZE);
@@ -288,6 +268,49 @@ bool GRBSystems::UpdateMaxTravel(unsigned int position) {
 
     newRep.maximum = position;
 
+    return UpdatePrefs(&newRep);
+}
+
+bool GRBSystems::UpdateBacklash(unsigned int backlash) {
+    REPORT newRep = report;
+
+    newRep.backlash = backlash;
+
+    return UpdatePrefs(&newRep);
+}
+
+bool GRBSystems::UpdateCurPos(unsigned int position) {
+    // Build out the HID report for a move absolute
+    unsigned char buf[BUF_SIZE];
+    unsigned char top = ((position & 0xff00) >> 8);
+    unsigned char bottom = (position & 0x00ff);
+
+    buf[0] = 0x00;      // Header byte
+    buf[1] = 0x16;      // Set Point
+    buf[2] = 0x00;      // channel 0
+    buf[3] = top;
+    buf[4] = bottom;
+
+    int res;
+    res = hid_write(handle, buf, BUF_SIZE);
+    if(res != BUF_SIZE){
+        DEBUGF(INDI::Logger::DBG_ERROR, "Failed to write curpos buffer: %d bytes sent", res);
+        return false;
+    }
+
+    return true;
+}
+
+bool GRBSystems::UpdateSpeed(unsigned int speed) {
+    // These delay to delay factors in the firmware.
+    REPORT newRep = report;
+
+    if(speed > 5)
+    {
+        speed = 5;
+    }
+
+    newRep.pulse = times[speed-1];
     return UpdatePrefs(&newRep);
 }
 
@@ -339,15 +362,36 @@ bool GRBSystems::UpdatePrefs(REPORT *prefs)
 
 bool GRBSystems::ISNewSwitch (const char *dev, const char *name, ISState *states, char *names[], int n)
 {
-    if(strcmp(dev,getDeviceName())==0)
-    {
-        if(strcmp(name,"POSITIVE_MOTION")==0)
-        {
+    if(strcmp(dev,getDeviceName())==0) {
+        if (strcmp(name, "FOCUS_REVERSE_MOTION") == 0) {
             //  client is telling us what to do with focus direction
-            PositiveMotionSP.s=IPS_OK;
-            IUUpdateSwitch(&PositiveMotionSP,states,names,n);
+            FocusReverseSP.s = IPS_OK;
+            IUUpdateSwitch(&FocusReverseSP, states, names, n);
             //  Update client display
-            IDSetSwitch(&PositiveMotionSP,NULL);
+            IDSetSwitch(&FocusReverseSP, NULL);
+
+            if (FocusReverseS[0].s == ISS_ON) {
+                UpdateDirection(false);
+            } else {
+                UpdateDirection(true);
+            }
+
+            return true;
+        }
+
+        if (strcmp(name, "FOCUS_ABORT_MOTION") == 0) {
+            // Always a single button
+            AbortFocuser();
+        }
+
+        if (strcmp(name, "FOCUS_BACKLASH_TOGGLE") == 0)
+        {
+            FocusBacklashSP.s = IPS_OK;
+            IUUpdateSwitch(&FocusBacklashSP, states, names, n);
+            //  Update client display
+            IDSetSwitch(&FocusBacklashSP, NULL);
+
+            // TODO - Zero out backlash on Disable
 
             return true;
         }
@@ -360,14 +404,46 @@ bool GRBSystems::ISNewNumber (const char *dev, const char *name, double values[]
 {
     if(strcmp(dev,getDeviceName())==0)
     {
-        if (!strcmp (name, MaxTravelNP.name)) {
-            IUUpdateNumber(&MaxTravelNP, values, names, n);
-            MaxTravelNP.s = IPS_OK;
-            IDSetNumber(&MaxTravelNP, NULL);
+        if (!strcmp (name, FocusMaxPosNP.name)) {
+            IUUpdateNumber(&FocusMaxPosNP, values, names, n);
+            FocusMaxPosNP.s = IPS_OK;
+            IDSetNumber(&FocusMaxPosNP, NULL);
 
             // Update the max travel required
 
-            return UpdateMaxTravel(MaxTravelN[0].value);
+            return UpdateMaxTravel(FocusMaxPosN[0].value);
+        }
+
+        if (!strcmp (name, FocusSyncNP.name)) {
+            IUUpdateNumber(&FocusSyncNP, values, names, n);
+            FocusSyncNP.s = IPS_OK;
+            IDSetNumber(&FocusSyncNP, NULL);
+
+            return UpdateCurPos(FocusSyncN[0].value);
+        }
+
+        if (!strcmp (name, FocusAbsPosNP.name)) {
+            IUUpdateNumber(&FocusAbsPosNP, values, names, n);
+            FocusAbsPosNP.s = IPS_OK;
+            IDSetNumber(&FocusAbsPosNP, NULL);
+
+            return MoveAbsFocuser(FocusAbsPosN[0].value);
+        }
+
+        if (!strcmp (name, FocusBacklashNP.name)) {
+            IUUpdateNumber(&FocusBacklashNP, values, names, n);
+            FocusBacklashNP.s = IPS_OK;
+            IDSetNumber(&FocusBacklashNP, NULL);
+
+            return UpdateBacklash(FocusBacklashN[0].value);
+        }
+
+        if (!strcmp (name, FocusSpeedNP.name)) {
+            IUUpdateNumber(&FocusSpeedNP, values, names, n);
+            FocusSpeedNP.s = IPS_OK;
+            IDSetNumber(&FocusSpeedNP, NULL);
+
+            return UpdateSpeed(FocusSpeedN[0].value);
         }
     }
 
@@ -378,8 +454,6 @@ bool GRBSystems::ISNewNumber (const char *dev, const char *name, double values[]
 void GRBSystems::GetFocusParams ()
 {
     IDSetNumber(&FocusAbsPosNP, NULL);
-    IDSetSwitch(&PositiveMotionSP,NULL);
-
 }
 
 IPState GRBSystems::MoveAbsFocuser(uint32_t targetTicks)
@@ -399,26 +473,16 @@ IPState GRBSystems::MoveAbsFocuser(uint32_t targetTicks)
     return IPS_BUSY;
 }
 
-IPState GRBSystems::MoveRelFocuser(FocusDirection dir, uint32_t ticks)
-{
-    DEBUGF(INDI::Logger::DBG_DEBUG, "MoveRelFocuser", NULL);
+int GRBSystems::MapPulse(int pulse) {
+    int speed = 1;
+    for(int i=0; i<5; i++){
+        if(pulse == times[i]){
+            speed = i+1;
+            break;
+        }
+    }
 
-    double newPosition=0;
-    bool rc=false;
-
-    if (dir == FOCUS_INWARD)
-        newPosition = FocusAbsPosN[0].value - ticks;
-    else
-        newPosition = FocusAbsPosN[0].value + ticks;
-
-    rc = MoveFocuser(newPosition);
-
-    if (rc == false)
-        return IPS_ALERT;
-
-    FocusRelPosNP.s = IPS_BUSY;
-
-    return IPS_BUSY;
+    return speed;
 }
 
 void GRBSystems::TimerHit() {
@@ -435,34 +499,34 @@ void GRBSystems::TimerHit() {
     }
 
 
-//    DEBUGF(INDI::Logger::DBG_DEBUG, "Is Moving: %d\n", report.isMoving);
-//    DEBUGF(INDI::Logger::DBG_DEBUG, "Position: %d\n", report.position);
-//    DEBUGF(INDI::Logger::DBG_DEBUG, "Maximum: %d\n", report.maximum);
-//    DEBUGF(INDI::Logger::DBG_DEBUG, "Pulse: %d\n", report.pulse);
-//    DEBUGF(INDI::Logger::DBG_DEBUG, "Direction: %d\n", report.direction);
-//    DEBUGF(INDI::Logger::DBG_DEBUG, "Backlash: %d\n", report.backlash);
-//    DEBUGF(INDI::Logger::DBG_DEBUG, "Microns: %d\n", report.microns);
-
     FocusAbsPosN[0].value = report.position;
-    FocusRelPosN[0].value = report.position;
+    FocusAbsPosN[0].min = 0.;
+    FocusAbsPosN[0].max = 22500.;
+    FocusAbsPosN[0].step = 100;
 
-//    DEBUGF(INDI::Logger::DBG_DEBUG, "Resetting Maximum to: %d\n", report.maximum);
-    MaxTravelN[0].value = report.maximum;
+    FocusMaxPosN[0].value = report.maximum;
+    FocusMaxPosN[0].max = 65535;
+    FocusMaxPosN[0].min = 2000;
+    FocusMaxPosN[0].step = 100;
 
-    FocusAbsPosN[0].max = report.maximum;
-    FocusRelPosN[0].max = report.maximum;
+    FocusBacklashN[0].value = report.backlash;
+    FocusBacklashN[0].max = 255;
+    FocusBacklashN[0].min = 0;
+    FocusBacklashN[0].step = 5;
 
     if (report.isMoving || (targetPos != report.position)) {
-        FocusRelPosNP.s = IPS_BUSY;
         FocusAbsPosNP.s = IPS_BUSY;
     } else {
-        FocusRelPosNP.s = IPS_OK;
         FocusAbsPosNP.s = IPS_OK;
     }
 
+    FocusSpeedN[0].value = MapPulse(report.pulse);
+
     IDSetNumber(&FocusAbsPosNP, NULL);
-    IDSetNumber(&FocusRelPosNP, NULL);
-    IDSetNumber(&MaxTravelNP, NULL);
+    IDSetNumber(&FocusMaxPosNP, NULL);
+    IDSetNumber(&FocusSyncNP, NULL);
+    IDSetNumber(&FocusBacklashNP, NULL);
+    IDSetNumber(&FocusSpeedNP, NULL);
 
     timerid = SetTimer(POLL_MS);
 }
@@ -485,7 +549,6 @@ void GRBSystems::DoRead()
 
     while(keep_running){
         haveReport = false;
-
         res = hid_read(handle, buf, BUF_SIZE);
         if (res == BUF_SIZE) {
             report.isMoving = (buf[DATA_OFFSET] != 0);
@@ -529,6 +592,3 @@ bool GRBSystems::AbortFocuser()
 
     return true;
 }
-
-
-
